@@ -20,7 +20,7 @@ if (-not $gpp) {
 Write-Host "Compilando con: $gpp" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path build | Out-Null
 
-& $gpp -std=c++17 -O3 -Wall -Wextra -static -Iinclude src/main.cpp -lgdi32 -luser32 -pthread -o build/kajiya_pathtracer.exe
+& $gpp -std=c++17 -O3 -Wall -Wextra -static -Iinclude src/main.cpp -lgdi32 -luser32 -lcomdlg32 -pthread -o build/kajiya_pathtracer.exe
 & $gpp -std=c++17 -O3 -Wall -Wextra -static -Iinclude tests/test_math_and_integrals.cpp -pthread -o build/test_math_and_integrals.exe
 
 Write-Host "Compilacion exitosa: build/kajiya_pathtracer.exe y build/test_math_and_integrals.exe" -ForegroundColor Green

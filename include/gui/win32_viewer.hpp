@@ -5,6 +5,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <commdlg.h>
 #endif
 
 #include "integrator/path_tracer.hpp"
@@ -34,7 +35,10 @@ public:
 
     Scene cornell_scene;
     Scene furnace_scene;
-    bool use_furnace = false;
+    Scene obj_scene;
+    int active_scene_mode = 0; // 0 = Cornell Box, 1 = Furnace Test, 2 = Cornell + OBJ Model
+    std::string loaded_obj_path = "assets/models/star_sculpture.obj";
+    size_t loaded_obj_tris = 0;
     bool show_variance_heatmap = false;
     bool paused = false;
 
@@ -55,13 +59,14 @@ public:
 
     std::vector<uint32_t> canvas_pixels; // BGRA 32-bit para StretchDIBits
 
-    Win32InteractiveViewer()
+    Win32InteractiveViewer(const std::string& initial_obj = "assets/models/star_sculpture.obj")
         : cornell_scene(Scene::create_cornell_box()),
           furnace_scene(Scene::create_furnace_test(1.0)),
           buf_cosine(render_w, render_h),
           buf_uniform(render_w, render_h),
           canvas_pixels(static_cast<size_t>(win_w * win_h), 0xFF0F172Au)
     {
+        load_custom_obj(initial_obj, false);
         cfg_cosine.width = render_w;
         cfg_cosine.height = render_h;
         cfg_cosine.max_bounces = 5;
@@ -69,6 +74,22 @@ public:
 
         cfg_uniform = cfg_cosine;
         cfg_uniform.strategy = SamplingStrategy::UniformHemisphere;
+    }
+
+    bool load_custom_obj(const std::string& filepath, bool switch_to_obj_mode = true) {
+        ObjLoadStats stats;
+        Scene new_scene = Scene::create_cornell_with_obj(filepath, &stats);
+        if (stats.success) {
+            obj_scene = std::move(new_scene);
+            loaded_obj_path = filepath;
+            loaded_obj_tris = stats.triangle_count;
+            if (switch_to_obj_mode) {
+                active_scene_mode = 2;
+                reset_buffers();
+            }
+            return true;
+        }
+        return false;
     }
 
     void reset_buffers() {
@@ -85,13 +106,15 @@ public:
     void step_simulation() {
         if (paused || (spp_cosine >= 1024 && spp_uniform >= 1024)) return;
 
-        const Scene& active_scene = use_furnace ? furnace_scene : cornell_scene;
-        Camera cam = use_furnace
+        const Scene& active_scene = (active_scene_mode == 1)
+            ? furnace_scene
+            : ((active_scene_mode == 2) ? obj_scene : cornell_scene);
+        Camera cam = (active_scene_mode == 1)
             ? Camera::furnace_camera(render_w, render_h)
             : Camera::cornell_camera(render_w, render_h);
 
-        cfg_cosine.max_bounces = use_furnace ? 1 : 5;
-        cfg_uniform.max_bounces = use_furnace ? 1 : 5;
+        cfg_cosine.max_bounces = (active_scene_mode == 1) ? 1 : 5;
+        cfg_uniform.max_bounces = (active_scene_mode == 1) ? 1 : 5;
 
         // Avanzamos 1 muestra en ambos integradores (o hasta 1024 SPP) para graficar en vivo la comparación
         int step = (spp_cosine < 16) ? 1 : ((spp_cosine < 64) ? 2 : 4);
@@ -251,15 +274,19 @@ public:
 
         SelectObject(hdc, hFontSub);
         SetTextColor(hdc, RGB(56, 189, 248));
-        std::string controls = "Controles: [1] Muestreo Coseno  [2] Muestreo Uniforme  [V] Ver Mapa Varianza/RGB  [F] Cambiar Escena (Cornell/Furnace)  [R] Reiniciar  [S] Guardar PNG/PPM";
+        std::string controls = "Controles: [1] Coseno [2] Uniforme [V] Mapa Varianza [F] Escena (Cornell/Furnace/OBJ) [O] Importar .OBJ [R] Reiniciar [S] Guardar";
         TextOutA(hdc, 24, 44, controls.c_str(), static_cast<int>(controls.size()));
 
         double var_u = buf_uniform.average_estimator_variance();
         double var_c = buf_cosine.average_estimator_variance();
         double ratio = (var_c > 1e-12) ? (var_u / var_c) : 1.0;
 
+        std::string scene_label = (active_scene_mode == 1)
+            ? "Fase 1 Furnace Test"
+            : ((active_scene_mode == 2) ? ("Cornell + OBJ (" + std::to_string(loaded_obj_tris) + " tris BVH)") : "Fase 2 Cornell Box");
+
         std::ostringstream status;
-        status << "Escena: " << (use_furnace ? "Fase 1 Horno de Luz (Furnace)" : "Fase 2 Cornell Box")
+        status << "Escena: " << scene_label
                << "  |  Vista: " << (active_strategy == SamplingStrategy::CosineWeightedHemisphere ? "COSENO p(w)=cos(theta)/pi" : "UNIFORME p(w)=1/(2*pi)")
                << (show_variance_heatmap ? " [MAPA DE VARIANZA]" : " [RADIANCIA RGB]")
                << "  |  SPP: " << spp_cosine
@@ -304,8 +331,23 @@ public:
                 } else if (wParam == 'V' || wParam == 'v') {
                     viewer->show_variance_heatmap = !viewer->show_variance_heatmap;
                 } else if (wParam == 'F' || wParam == 'f') {
-                    viewer->use_furnace = !viewer->use_furnace;
+                    viewer->active_scene_mode = (viewer->active_scene_mode + 1) % 3;
                     viewer->reset_buffers();
+                } else if (wParam == 'M' || wParam == 'm') {
+                    viewer->active_scene_mode = 2;
+                    viewer->reset_buffers();
+                } else if (wParam == 'O' || wParam == 'o') {
+                    char file_buf[MAX_PATH] = {0};
+                    OPENFILENAMEA ofn{};
+                    ofn.lStructSize = sizeof(OPENFILENAMEA);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFilter = "Modelos Wavefront OBJ (*.obj)\0*.obj\0Todos los archivos (*.*)\0*.*\0";
+                    ofn.lpstrFile = file_buf;
+                    ofn.nMaxFile = MAX_PATH;
+                    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+                    if (GetOpenFileNameA(&ofn)) {
+                        viewer->load_custom_obj(file_buf, true);
+                    }
                 } else if (wParam == 'R' || wParam == 'r') {
                     viewer->reset_buffers();
                 } else if (wParam == 'S' || wParam == 's') {

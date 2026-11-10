@@ -2,6 +2,8 @@
 #include "math/mat4.hpp"
 #include "geometry/sphere.hpp"
 #include "geometry/triangle.hpp"
+#include "geometry/bvh.hpp"
+#include "io/obj_loader.hpp"
 #include "integrator/sampling.hpp"
 #include <iostream>
 #include <cassert>
@@ -88,11 +90,46 @@ void test_monte_carlo_hemisphere_integral() {
               << mean_c << " (Var = " << var_c << ")\n";
 }
 
+void test_obj_loader_and_bvh() {
+    std::vector<Triangle> tris;
+    ObjLoadStats stats = ObjLoader::load_from_file("assets/models/star_sculpture.obj", tris, 0, Mat4::identity(), true);
+    assert(stats.success);
+    assert(stats.vertex_count == 18);
+    assert(stats.triangle_count == 30);
+
+    BVHAccel bvh;
+    bvh.build(tris);
+    assert(!bvh.nodes.empty());
+
+    // Verificar que el BVH devuelve exactamente el mismo impacto t que la búsqueda lineal exhaustiva
+    Ray test_ray(Point3(0.0, 0.5, 3.0), normalize(Vec3(0.05, -0.05, -1.0)));
+    HitRecord rec_bvh, rec_linear;
+    bool hit_bvh = bvh.intersect(tris, test_ray, 1e-5, 1e30, rec_bvh);
+
+    bool hit_linear = false;
+    double closest = 1e30;
+    for (const auto& t : tris) {
+        HitRecord tmp;
+        if (t.intersect(test_ray, 1e-5, closest, tmp)) {
+            hit_linear = true;
+            closest = tmp.t;
+            rec_linear = tmp;
+        }
+    }
+    assert(hit_bvh == hit_linear);
+    if (hit_bvh) {
+        assert(std::abs(rec_bvh.t - rec_linear.t) < 1e-12);
+    }
+    std::cout << "[PASS] Importador Wavefront OBJ (" << stats.triangle_count
+              << " triangulos) y arbol de aceleracion BVH (" << bvh.nodes.size() << " nodos)\n";
+}
+
 int main() {
     std::cout << "Ejecutando pruebas unitarias del nucleo matematico y geometrico...\n";
     test_vector_and_onb();
     test_ray_sphere_and_moller_trumbore();
     test_monte_carlo_hemisphere_integral();
+    test_obj_loader_and_bvh();
     std::cout << "Todas las pruebas matematicas pasaron exitosamente.\n";
     return 0;
 }

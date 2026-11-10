@@ -48,11 +48,14 @@ Para superficies difusas Lambertianas ($f_r = \frac{\rho}{\pi}$), el motor imple
 │   │   ├── hittable.hpp        # Registro de impacto (HitRecord) y orientación de normales
 │   │   ├── sphere.hpp          # Intersección analítica Rayo-Esfera (ecuación cuadrática)
 │   │   ├── triangle.hpp        # Intersección analítica Rayo-Triángulo (Algoritmo de Möller–Trumbore)
-│   │   └── scene.hpp           # Escenas: Fase 1 (Furnace Test) y Fase 2 (Cornell Box)
+│   │   ├── aabb.hpp            # Caja delimitadora (AABB) por el método de losas (Slab Method)
+│   │   ├── bvh.hpp             # Árbol de aceleración espacial BVH O(log_2 M) construido desde cero
+│   │   └── scene.hpp           # Escenas: Fase 1 (Furnace), Fase 2 (Cornell Box) y Cornell + Modelo OBJ
 │   ├── integrator/
 │   │   ├── sampling.hpp        # Generador PCG32, muestreo hemisférico uniforme y ponderado por coseno
 │   │   └── path_tracer.hpp     # Integrador Monte Carlo multihilo (std::thread) + acumulador de Welford
 │   ├── io/
+│   │   ├── obj_loader.hpp      # Importador de mallas 3D Wavefront (.obj) desde cero con auto-normalización
 │   │   └── image_export.hpp    # Exportación directa a PPM (P6) y PNG (RFC 2083 desde cero) + mapas de calor
 │   ├── benchmark/
 │   │   └── benchmark_suite.hpp # Suite cuantitativa de convergencia MSE, varianza y dashboard HTML
@@ -132,6 +135,12 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 .\build\kajiya_pathtracer.exe --benchmark --size 160 --ref-spp 4096
 ```
 
+### Importar y Renderizar un Modelo 3D Externo (`.obj`) con Aceleración BVH
+```powershell
+.\build\kajiya_pathtracer.exe --obj assets/models/star_sculpture.obj --size 200
+```
+![Cornell Box con Modelo OBJ](output/cornell_obj_cosine_spp256.png)
+
 ### Abrir el Visualizador Interactivo en Tiempo Real (Win32 GUI)
 ```powershell
 .\build\kajiya_pathtracer.exe --gui
@@ -140,6 +149,7 @@ Controles dentro de la ventana interactiva:
 - `[1]`: Activar **Muestreo Ponderado por Coseno** ($p(\omega) = \frac{\cos\theta}{\pi}$)
 - `[2]`: Activar **Muestreo Hemisférico Uniforme** ($p(\omega) = \frac{1}{2\pi}$)
 - `[V]`: Alternar entre **Radiancia Foto-realista RGB** y **Mapa de Calor de Varianza por Píxel**
-- `[F]`: Alternar entre escena **Cornell Box** y **Horno de Luz (White Furnace Test)**
+- `[F]`: Alternar entre **Cornell Box**, **Horno de Luz (Furnace Test)** y **Cornell Box + Modelo `.obj`**
+- `[O]`: Abrir selector de archivos de Windows para importar cualquier modelo **Wavefront `.obj`** en vivo
 - `[R]`: Reiniciar acumulación de muestras
 - `[S]`: Exportar instantánea actual a archivos `.png` y `.ppm`
