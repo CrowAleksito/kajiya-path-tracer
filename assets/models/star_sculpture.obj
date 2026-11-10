@@ -1,0 +1,63 @@
+# Wavefront OBJ - Escultura Poliedrica Estrellada (Star Polyhedron Sculpture)
+# Modelo 3D de prueba para el motor Path Tracer (Ecuacion de Kajiya)
+
+# Vertices del nucleo cubico (1..8)
+v -0.500000  0.500000  0.500000
+v  0.500000  0.500000  0.500000
+v  0.500000  1.500000  0.500000
+v -0.500000  1.500000  0.500000
+v -0.500000  0.500000 -0.500000
+v  0.500000  0.500000 -0.500000
+v  0.500000  1.500000 -0.500000
+v -0.500000  1.500000 -0.500000
+
+# Vertices de las 6 puntas piramidales (9..14)
+v  0.000000  1.000000  1.350000
+v  0.000000  1.000000 -1.350000
+v  1.350000  1.000000  0.000000
+v -1.350000  1.000000  0.000000
+v  0.000000  2.350000  0.000000
+v  0.000000  0.000000  0.000000
+
+# Vertices del anillo octogonal de base (15..18)
+v -0.850000  0.000000  0.850000
+v  0.850000  0.000000  0.850000
+v  0.850000  0.000000 -0.850000
+v -0.850000  0.000000 -0.850000
+
+# Piramide frontal (+Z, apice 9)
+f 1 2 9
+f 2 3 9
+f 3 4 9
+f 4 1 9
+
+# Piramide trasera (-Z, apice 10)
+f 6 5 10
+f 5 8 10
+f 8 7 10
+f 7 6 10
+
+# Piramide derecha (+X, apice 11)
+f 2 6 11
+f 6 7 11
+f 7 3 11
+f 3 2 11
+
+# Piramide izquierda (-X, apice 12)
+f 5 1 12
+f 1 4 12
+f 4 8 12
+f 8 5 12
+
+# Piramide superior (+Y, apice 13)
+f 4 3 13
+f 3 7 13
+f 7 8 13
+f 8 4 13
+
+# Pedestal piramidal inferior conectado a la base (15..18)
+f 15 16 2 1
+f 16 17 6 2
+f 17 18 5 6
+f 18 15 1 5
+f 18 17 16 15
