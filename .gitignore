@@ -1,0 +1,16 @@
+# Build artifacts
+build/
+bin/
+*.o
+*.obj
+*.exe
+*.out
+*.pdb
+*.ilk
+output/*.ppm
+
+# OS / IDE files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

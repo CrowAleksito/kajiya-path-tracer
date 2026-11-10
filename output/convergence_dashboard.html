@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Convergencia Monte Carlo - Ecuación de Kajiya</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent-cos: #38bdf8;
+    --accent-uni: #f97316;
+    --accent-ref: #4ade80;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 32px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  h1, h2, h3 { color: #fff; margin-top: 0; }
+  .header-box {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-bottom: 28px;
+  }
+  .formula {
+    background: #090d16;
+    border-left: 4px solid var(--accent-cos);
+    padding: 14px 20px;
+    font-family: 'Cambria Math', 'Consolas', monospace;
+    font-size: 1.05rem;
+    border-radius: 6px;
+    margin: 14px 0;
+    color: #e2e8f0;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 24px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    margin-top: 12px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: #0f172a; color: var(--accent-cos); text-align: right; }
+  td:first-child, th:first-child { text-align: left; font-weight: 600; }
+  .badge-good {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .gallery-item {
+    background: #090d16;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+  .gallery-item img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    image-rendering: pixelated;
+  }
+  .gallery-item span {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-box">
+    <h1>Motor Path Tracer en C++ — Resolución Numérica de la Ecuación de Kajiya</h1>
+    <p style="color:var(--muted); margin-bottom:10px;">
+      Integración Hemisférica de Monte Carlo en Coordenadas Esféricas (d&omega; = sin&theta; d&theta; d&phi;) y Muestreo por Importancia Ponderado por Coseno
+    </p>
+    <div class="formula">
+      L<sub>o</sub>(x, &omega;<sub>o</sub>) = L<sub>e</sub>(x, &omega;<sub>o</sub>) + &int;<sub>&Omega;</sub> f<sub>r</sub>(x, &omega;<sub>i</sub>, &omega;<sub>o</sub>) L<sub>i</sub>(x, &omega;<sub>i</sub>) (&omega;<sub>i</sub> &middot; n) d&omega;<sub>i</sub>
+      &nbsp;&nbsp;&rArr;&nbsp;&nbsp;
+      &langle;L<sub>o</sub>&rangle;<sub>N</sub> = (1/N) &Sigma; [ f<sub>r</sub> L<sub>i</sub> cos&theta;<sub>k</sub> / p(&omega;<sub>k</sub>) ]
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fase 1: Validación Analítica de la Integral — Horno de Luz (White Furnace Test)</h2>
+    <p style="color:var(--muted)">
+      Esfera unitaria 100% reflectora difusa (&rho; = 1.0, f<sub>r</sub> = 1/&pi;) en un entorno isotrópico L<sub>i</sub> = 1.0.
+      En equilibrio termodinámico, &int;<sub>&Omega;</sub> (1/&pi;) cos&theta; sin&theta; d&theta; d&phi; = <strong>1.000000</strong>.
+      Con muestreo por coseno p(&omega;) = cos&theta;/&pi;, el factor cos&theta; se cancela algebraicamente, produciendo varianza cero en 1 rebote.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Muestras (N)</th>
+          <th>&langle;L<sub>o</sub>&rangle; Uniforme</th>
+          <th>Varianza Muestral Unif</th>
+          <th>Error |&langle;L<sub>o</sub>&rangle; - 1| Unif</th>
+          <th>&langle;L<sub>o</sub>&rangle; Coseno</th>
+          <th>Varianza Muestral Coseno</th>
+          <th>Error |&langle;L<sub>o</sub>&rangle; - 1| Coseno</th>
+        </tr>
+      </thead>
+      <tbody>
+<tr><td>1 SPP</td><td>1.002408</td><td>0.000000</td><td>0.500833</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+<tr><td>4 SPP</td><td>1.002122</td><td>0.334642</td><td>0.234041</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+<tr><td>16 SPP</td><td>0.999672</td><td>0.334385</td><td>0.115287</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+<tr><td>64 SPP</td><td>0.999933</td><td>0.333794</td><td>0.058146</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+<tr><td>256 SPP</td><td>0.999705</td><td>0.333392</td><td>0.028862</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+<tr><td>1024 SPP</td><td>1.000049</td><td>0.333248</td><td>0.014336</td><td><span class='badge-good'>1.000000</span></td><td><span class='badge-good'>0.000000</span></td><td><span class='badge-good'>0.000000</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Fase 2 y 3: Escena Estándar Cornell Box — Convergencia MSE y Reducción de Varianza</h2>
+    <p style="color:var(--muted)">
+      Comparación cuantitativa entre Muestreo Hemisférico Uniforme p(&omega;) = 1/(2&pi;) y Muestreo Ponderado por Coseno p(&omega;) = cos&theta;/&pi;
+      frente a la imagen de referencia calculada con N = 4096 SPP.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>SPP (N = 2<sup>k</sup>)</th>
+          <th>MSE Uniforme</th>
+          <th>MSE Coseno</th>
+          <th>RMSE Coseno O(1/&radic;N)</th>
+          <th>Var(&langle;L<sub>o</sub>&rangle;) Uniforme</th>
+          <th>Var(&langle;L<sub>o</sub>&rangle;) Coseno</th>
+          <th>Reducción de Varianza</th>
+          <th>Tiempo Coseno (ms)</th>
+        </tr>
+      </thead>
+      <tbody>
+<tr><td>1 SPP</td><td>1.310674</td><td>0.828331</td><td>0.910127</td><td>1.310674</td><td>0.828331</td><td><span class='badge-good'>1.58x menor varianza</span></td><td>4.6 ms</td></tr>
+<tr><td>4 SPP</td><td>0.325823</td><td>0.205609</td><td>0.453442</td><td>0.320514</td><td>0.207909</td><td><span class='badge-good'>1.54x menor varianza</span></td><td>13.8 ms</td></tr>
+<tr><td>16 SPP</td><td>0.085338</td><td>0.052867</td><td>0.229928</td><td>0.084319</td><td>0.052683</td><td><span class='badge-good'>1.60x menor varianza</span></td><td>43.5 ms</td></tr>
+<tr><td>64 SPP</td><td>0.021515</td><td>0.013219</td><td>0.114975</td><td>0.021147</td><td>0.013021</td><td><span class='badge-good'>1.62x menor varianza</span></td><td>156.0 ms</td></tr>
+<tr><td>256 SPP</td><td>0.005445</td><td>0.003490</td><td>0.059077</td><td>0.005278</td><td>0.003249</td><td><span class='badge-good'>1.62x menor varianza</span></td><td>606.0 ms</td></tr>
+<tr><td>1024 SPP</td><td>0.001539</td><td>0.001019</td><td>0.031923</td><td>0.001319</td><td>0.000812</td><td><span class='badge-good'>1.62x menor varianza</span></td><td>2428.8 ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Progresión Visual de Convergencia: Muestreo por Coseno p(&omega;) = cos&theta;/&pi;</h2>
+    <div class="gallery">
+      <div class='gallery-item'><img src='cornell_cosine_spp1.png' alt='Coseno SPP 1'><span><strong>N = 1 SPP</strong><br>MSE: 0.82833</span></div>
+      <div class='gallery-item'><img src='cornell_cosine_spp4.png' alt='Coseno SPP 4'><span><strong>N = 4 SPP</strong><br>MSE: 0.20561</span></div>
+      <div class='gallery-item'><img src='cornell_cosine_spp16.png' alt='Coseno SPP 16'><span><strong>N = 16 SPP</strong><br>MSE: 0.05287</span></div>
+      <div class='gallery-item'><img src='cornell_cosine_spp64.png' alt='Coseno SPP 64'><span><strong>N = 64 SPP</strong><br>MSE: 0.01322</span></div>
+      <div class='gallery-item'><img src='cornell_cosine_spp256.png' alt='Coseno SPP 256'><span><strong>N = 256 SPP</strong><br>MSE: 0.00349</span></div>
+      <div class='gallery-item'><img src='cornell_cosine_spp1024.png' alt='Coseno SPP 1024'><span><strong>N = 1024 SPP</strong><br>MSE: 0.00102</span></div>
+    </div>
+    <h2 style="margin-top:24px;">Progresión Visual de Convergencia: Muestreo Uniforme p(&omega;) = 1/(2&pi;)</h2>
+    <div class="gallery">
+      <div class='gallery-item'><img src='cornell_uniform_spp1.png' alt='Uniforme SPP 1'><span><strong>N = 1 SPP</strong><br>MSE: 1.31067</span></div>
+      <div class='gallery-item'><img src='cornell_uniform_spp4.png' alt='Uniforme SPP 4'><span><strong>N = 4 SPP</strong><br>MSE: 0.32582</span></div>
+      <div class='gallery-item'><img src='cornell_uniform_spp16.png' alt='Uniforme SPP 16'><span><strong>N = 16 SPP</strong><br>MSE: 0.08534</span></div>
+      <div class='gallery-item'><img src='cornell_uniform_spp64.png' alt='Uniforme SPP 64'><span><strong>N = 64 SPP</strong><br>MSE: 0.02151</span></div>
+      <div class='gallery-item'><img src='cornell_uniform_spp256.png' alt='Uniforme SPP 256'><span><strong>N = 256 SPP</strong><br>MSE: 0.00544</span></div>
+      <div class='gallery-item'><img src='cornell_uniform_spp1024.png' alt='Uniforme SPP 1024'><span><strong>N = 1024 SPP</strong><br>MSE: 0.00154</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
